@@ -6,8 +6,21 @@ output:
     highlight: pygments
     theme: spacelab
 ---
+Author: Mike Holmquest
+Date: December 14th, 2020
 
 ## Setup
+This is the final data analysis project for the Duke University Coursera Statistical Inference Course. 
+
+According to the supporting documentations, this uses an extract of the General Social Survey (GSS) Cumulative File 1972-2012 and provides a sample of selected indicators in the GSS with the goal of providing a convenient data resource for students learning statistical reasoning using the R language. Unlike the full General Social Survey Cumulative File, they have removed missing values from the responses and created factor variables when appropriate to facilitate analysis using R. The hope is that this would allow students to focus on statistical concepts without having to (initially) be concerned about some of the data management and interpretation issues associated with missing data and factor variables in R. Other than the two modifications mentioned above, all data and coding come from the original dataset. Students and researchers seeking to conduct research or explore the full codebook behind the full General Social Survey Cumulative File are urged to consult the original dataset at the citation that follows:
+
+###Data Citation
+
+Smith, Tom W., Michael Hout, and Peter V. Marsden. General Social Survey, 1972-2012 [Cumulative File]. ICPSR34802-v1. Storrs, CT: Roper Center for Public Opinion Research, University of Connecticut /Ann Arbor, MI: Inter-university Consortium for Political and Social Research [distributors], 2013-09-11. doi:10.3886/ICPSR34802.v1
+
+Persistent URL: http://doi.org/10.3886/ICPSR34802.v1
+## Setup
+I think an important consideration of this data is that the respondents to the surveys have changed throughout the years of collection. The responses are not longitudinal changes for respondents, but are a general survey of the populations overall trends and responses. 
 
 ### Load packages
 
@@ -19,15 +32,9 @@ library(statsr)
 
 ### Load data
 
-Make sure your data and R Markdown files are in the same directory. When loaded
-your data file will be called `gss`. Delete this note when before you submit 
-your work. 
-
 ```{r load-data}
 load("gss.Rdata")
 ```
-
-
 
 * * *
 
