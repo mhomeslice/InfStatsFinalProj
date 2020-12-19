@@ -5,22 +5,32 @@ output:
     fig_height: 4
     highlight: pygments
     theme: spacelab
----
 Author: Mike Holmquest
 Date: December 14th, 2020
+---
+By: Mike Holmquest
 
 ## Setup
 This is the final data analysis project for the Duke University Coursera Statistical Inference Course. 
 
 According to the supporting documentations, this uses an extract of the General Social Survey (GSS) Cumulative File 1972-2012 and provides a sample of selected indicators in the GSS with the goal of providing a convenient data resource for students learning statistical reasoning using the R language. Unlike the full General Social Survey Cumulative File, they have removed missing values from the responses and created factor variables when appropriate to facilitate analysis using R. The hope is that this would allow students to focus on statistical concepts without having to (initially) be concerned about some of the data management and interpretation issues associated with missing data and factor variables in R. Other than the two modifications mentioned above, all data and coding come from the original dataset. Students and researchers seeking to conduct research or explore the full codebook behind the full General Social Survey Cumulative File are urged to consult the original dataset at the citation that follows:
 
-###Data Citation
+### Data Citation
 
 Smith, Tom W., Michael Hout, and Peter V. Marsden. General Social Survey, 1972-2012 [Cumulative File]. ICPSR34802-v1. Storrs, CT: Roper Center for Public Opinion Research, University of Connecticut /Ann Arbor, MI: Inter-university Consortium for Political and Social Research [distributors], 2013-09-11. doi:10.3886/ICPSR34802.v1
 
-Persistent URL: http://doi.org/10.3886/ICPSR34802.v1
-## Setup
-I think an important consideration of this data is that the respondents to the surveys have changed throughout the years of collection. The responses are not longitudinal changes for respondents, but are a general survey of the populations overall trends and responses. 
+* Persistent URL: http://doi.org/10.3886/ICPSR34802.v1
+
+
+## Setup and Considerations
+
+The data is collected from random sampling of the population. However, this is an observational study. This allows us to apply some broad generalizations, but not have any causation or correlation. 
+
+This is a study that could introduce bias. The methodology has changed throughout the years, and the respondents have changed through time. For a true longitudinal study the same respondents would need to be surveyed over the years. Also, classifications of race, and language have changed over the years which introduces the possibility of inaccurate or incomplete data for different years of collection.
+
+The voluntary participation in the survey also limits the respondents to those interested in spending time to fill out a survey. Some people might be too busy, or unable to participate because of a range of reasons. The respondents answers are also subjective to their views and  opinions. These factors have the potential to create inaccurate and/or biased data as well. 
+
+In conclusion, the trends and changes over time are great indicators of societal changes, but they are not able to be used for more than observational conclusions. To create causation and correlation a more scientific design would need to be implemented in the methodology including random assignment and more representative data collection techniques.   
 
 ### Load packages
 
@@ -31,7 +41,7 @@ library(statsr)
 ```
 
 ### Load data
-
+The data was downloaded and put into the project folder ahead of time so no web links were required. 
 ```{r load-data}
 load("gss.Rdata")
 ```
@@ -40,25 +50,248 @@ load("gss.Rdata")
 
 ## Part 1: Data
 
+Let's take a look at the data first
+```{r}
+dim(gss)
+names(gss)
+```
+The data contains 57,061 observations with 114 different variables. From the supporting documents we know that it has been cleaned already and therefore their are no NA's in the data. 
 
 * * *
 
 ## Part 2: Research question
 
+1. Is there a higher prevalence of gun ownership in different socioeconomic status? 
 
+**Secondary Questions:**
+a. Has this changed over course of the GSS data being collected?
+b. Is there a regional difference in gun ownership?
 
-* * *
+The data that are the most relevant to study for this analysis are the following:
+
+1. **REGION** - Region of Interview
+
+VALUE|	LABEL
+---- |-----
+NA   |	NOT ASSIGNED
+1  |	NEW ENGLAND
+2 |	MIDDLE ATLANTIC
+3  |	E. NOR. CENTRAL
+4 |	W. NOR. CENTRAL
+5 |	SOUTH ATLANTIC
+6 |	E. SOU. CENTRAL
+7 |	W. SOU. CENTRAL
+8 |	MOUNTAIN
+9 |	PACIFIC
+
+2. **CONINC** - Family income in costant dollars.
+
+3. **OWNGUN** - a numerical variable answering the question
+"Do you happen to have in your home (or garage) any guns or revolvers?".
+
+VALUE| LABEL
+---- | ----
+ NA  | IAP
+ 1   | YES
+ 2   |  NO
+ 3   | REFUSED
+ NA  |  DK
+ NA  |  NA
+
+## Data Cleaning
+
+```{r subset df}
+
+GSStidy  <- gss[ , c("year", "coninc", "region", "owngun")]
+
+colnames(GSStidy) <- c("Year", "Inf_adj_Income", "Region", "Gun_Owner") 
+```
+
+Let's first look how income is related to gun ownership. First we convert the factor variable "Yes" and "No" into integers. Second, we eliminate all the income data without information and also any missing data from the gun ownership data. Then we need to convert the labels in gun ownership to values.
+
+```{r new_dfs}
+# Create a data frame for Income and Guns
+GunsbyIncome <- GSStidy %>%
+        mutate(Gun_Owner = ifelse(Gun_Owner == "No",0,1)) %>%
+        filter(!is.na(Inf_adj_Income)) %>%
+        filter(!is.na(Gun_Owner))
+
+# Create a data frame for years and Guns
+GunsbyYear <- GSStidy %>%
+        filter(!is.na(Gun_Owner)) %>%
+        mutate(Gun_Owner = ifelse(Gun_Owner == "No",0,1)) %>%
+        group_by(Year)
+
+# Create a data frame for Region and Guns
+GunsbyRegion <- GSStidy %>%
+        filter(!is.na(Gun_Owner)) %>%
+        filter(!is.na(Region)) %>%
+        mutate(Gun_Owner = ifelse(Gun_Owner == "No",0,1)) %>%
+        arrange(Inf_adj_Income)
+
+```
+
+Let's aggregate the data so we can get some totals for different years and income levels.
+
+```{r aggregate}
+# Aggregate results by inflation adjusted income
+GunsbyIncomeSum <- aggregate(Gun_Owner ~ Inf_adj_Income, GunsbyIncome, sum, decreasing = TRUE )
+
+# Aggregate gun ownership by year
+GunsbyYearSum <- aggregate(Gun_Owner ~ Year, GunsbyYear, sum, decreasing = TRUE )
+
+# Aggregate results by region of the country
+GunsbyRegionSum <- aggregate(Gun_Owner ~ Region, GunsbyRegion , sum, decreasing = FALSE )
+```
 
 ## Part 3: Exploratory data analysis
 
-NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
-button (green button with orange arrow) above. Make sure that your code is visible
-in the project you submit. Delete this note when before you submit your work.
+To analyze the data I want to explore some of the relationships between a few of the variables to see if there are any trends. I will do this by looking at some of the summary statistics and then plotting the data for some quick visualizations. 
 
+Lets first take a look at some of the statistics for gun ownership and income levels.
+```{r stats}
+summary(GunsbyIncomeSum)
+```
+
+Let's plot the guns by income data to see how gun ownership and income levels are related. The linear model represents how gun ownershhip changes as the income level changes. 
+
+```{r Gun_ownership}
+ggplot(data = GunsbyIncomeSum, aes(x = Inf_adj_Income, y= Gun_Owner)) + 
+        geom_point() +
+        geom_smooth() +
+        labs(title="Gun Ownership in relation to Inflation Adjusted Income Level", x="Inflation Adjusted Income ($)",y="Number of Gun Owners")
+```
+
+According to the data, their appears to be an increase in the number of homeowners with guns that begins to decrease as the inflation adjusted income continues to increase. This is right-skewed. The shaded area surrounding the line indicates the uncertainty around these values. 
+
+Now Lets take a look at some of the statistics for gun ownership throughout the years.The Year is not of interest to us so let's focus on the gun ownership values.
+
+```{r stats(gunownersbyincome)}
+summary(GunsbyYearSum$Gun_Owner)
+```
+
+Now that we have some basic statistics, let's take a look at gun ownership trends with this sample data throughout the years graphically. I added in a linear model to see how the trends have changed over the years. 
+
+```{r GunsbyYear}
+ggplot(data = GunsbyYearSum, aes(x = Year, y= Gun_Owner)) + 
+        geom_line() +
+        geom_smooth() +
+        labs(title="Gun Ownership by Year of Study", x="Year",y="Number of Gun Owners")
+```
+This graph indicates that the overall trend for gun ownership appears to be decreasing since the data began being collected. However, the uncertainty values are large and the fluctuation between years also seem to be very high. This indicates that their needs to be more analysis before any conclusions can be made about the data. 
+
+Just out of curiosity I also wanted to look at if the ownership of guns has any relation to the region people lived in. I wanted to also see how it related to income levels within the regions so I filled the bars with data from the different income levels. 
+
+```{r stats(gunownersbyregion)}
+summary(GunsbyRegion[ , 2:3])
+```
+
+This gives an overall picture of the variation within regions. As you can see, there is a high variation in the numbers Let's take a look at this graphically with the income levels also included. 
+
+```{r GunsbyRegion}
+ggplot(data = GunsbyRegion, aes(x = Region, y = Gun_Owner, fill = Inf_adj_Income, )) + 
+        geom_bar(stat = "identity") +
+        theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+        labs(fill = "Inflation Adjusted Income", title="Gun Ownership by Region in the U.S.", x="Region", y="Number of Gun Owners")
+
+```
+This graph is interesting because the two outliers, the South Atlantic, and E. Nor. Central both have higher counts of gun ownership. It would be interesting in future analysis to see how the percentages of ownership varies by income level compares between regions. However, that is beyond the scope of this project and would require a much more detailed analysis, including some questions that I would have for the survey team on the regions and the collection methodology. 
 * * *
 
 ## Part 4: Inference
+Let's start seeing if there are any stistical differences in this data.
 
-NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
-button (green button with orange arrow) above. Make sure that your code is visible
-in the project you submit. Delete this note when before you submit your work.
+Is there a higher prevalence of gun ownership in different socioeconomic status? 
+
+### Hypothesis:
+H0: There is no relationship between gun ownership and income levels.
+ HA: There is a relationship between gun ownership and income levels.
+ 
+ To do this I need to separate out the gun owners and non-gun owners. 
+ 
+```{r dif_income}
+## Subset the guns by owner income to the income of gun owners
+gun_ownerincome <- subset(GunsbyIncome, Gun_Owner == 1)$Inf_adj_Income
+summary(gun_ownerincome)
+## Subset the guns by owner income to the income of non-gun owners
+nogun_ownerincome <- subset(GunsbyIncome, Gun_Owner == 0)$Inf_adj_Income
+summary(nogun_ownerincome)
+```
+ Just from this quick summary we can see that the median and mean of the gun owners vs. non-gun owners is very different. The question is if this is statistically significant. 
+ 
+Lets take a quick look at this graphically. 
+```{r Histograms}
+
+par(mfrow = c(1,2)) # combine plots
+# histogram of gun owners
+hist(gun_ownerincome, main = "Gun Ownership vs. Income", xlab = "Income", col.main = "purple", col = "purple" , font.main=1)
+abline(v = mean(gun_ownerincome, col = "orange", lwd = 10))
+# histogram of non-gun owners
+hist(nogun_ownerincome, main = "Non-Gun Ownership vs. Income", xlab = "Income", col.main = "blue",  col = "blue", font.main=1 )
+abline(v = mean(nogun_ownerincome, col = "orange", lwd = 10))
+
+```
+
+As you can see the mean line for the graphs are different by abuot 9000 dollars. Let's find out statistically how this is different.  Let's look at these exact numbers.
+
+```{r mean}
+a <- mean(gun_ownerincome)
+print(paste("Gun Owner Mean Income =", a))
+b <- mean(nogun_ownerincome)
+print(paste("Non-Gun Owner Mean Income =", b))
+c = a-b
+print(paste("Total Difference =", c))
+
+```
+
+Let's see how these averages represent the data with some box and whisker plots. 
+
+```{r boxplot}
+ggplot(GunsbyIncome, aes(Gun_Owner, Inf_adj_Income, group = Gun_Owner)) +
+        geom_boxplot()+
+        scale_x_discrete(labels=c("0" = "No Gun", ".5" = " ",
+                              "1" = "Gun Owner"))+
+        xlab("Gun Owners")+
+        ylab("Income")+
+        labs(title = "Income comparison by Gun Ownership")
+```
+As this box and whisker plot shows, the data is right skewed and the means are different for the non-gun owners and the gun owners.
+
+### Checking Conditions for Inference
+
+1- Independent
+The data is a simple random sample and is less than 10% of the population they are independent. 
+2) Normal Distribution
+While the sample is right skewed, there is a large enough sample size to use the t-distribution.
+
+**Confidence Interval** let's first calculate the confidence interval between the gun population and the non gun population. This will give us what the expected variance of the data will be at a 95% confidence interval. We will use the t.test function in R to complete this. 
+
+```{r confidenceInterval}
+diff_means <- mean(gun_ownerincome) - mean(nogun_ownerincome)
+SE = sqrt((sd(gun_ownerincome)^2 / length(gun_ownerincome)) +
+  (sd(nogun_ownerincome)^2 / length(nogun_ownerincome)))
+t_crit = 2.08 #two-tailed test
+conf_int = diff_means + c(-t_crit*SE, t_crit*SE); conf_int
+```
+The confidence intervals show that those who own a gun have between 8,180 and 9.846 dollars more per year in income on average.
+
+In order to test our original null hypothesis, it is necessary to calculate the appropriate t statistic using a value for the degrees of freedom equal to the lowest group size.
+```{r groupsize}
+length(gun_ownerincome)
+length(nogun_ownerincome)
+```
+According to this code, we have 13,042 respondents for gun ownership, and 18,018 for no gun ownership. In other words, (13042) - 1 or, in other words, df = 13041.
+
+```{r}
+t_stat = (mean(gun_ownerincome) - mean(nogun_ownerincome)) / SE
+t_stat
+```
+
+```{r}
+t.test(gun_ownerincome, nogun_ownerincome)
+```
+According to the data, the P value is essentially 0 which indicates that there is indeed a significant difference between the two groups.
+
+### Conclusion
+According to the data, we reject the null hypothesis that there is no difference between gun ownership and income level. 
+
